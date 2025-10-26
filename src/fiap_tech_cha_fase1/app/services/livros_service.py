@@ -44,6 +44,10 @@ def obter_livro_por_id(livro_id: str):
     return None
 
 def buscar_livros(titulo: str = None, categoria: str = None):
+    """Filtra livros por título e/ou categoria (case-insensitive).
+    Args: titulo: parte do título; categoria: nome exato da categoria.
+    Returns: lista de registros do CSV já filtrados.
+    """
     dados = carregar_livros()
     if titulo:
         t = titulo.strip().lower()

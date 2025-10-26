@@ -8,7 +8,10 @@ from typing import List, Optional, Literal
 from datetime import datetime
 
 class LivroBase(BaseModel):
-    id: str = Field(..., json_schema_extra={"example": "047dfa57ba0bf638"})
+    """Esquema de livro servido pela API.
+    Campos: id (UPC), titulo, preco (string), rating (texto 1–5), disponibilidade, categoria, imagem_local.
+    """
+    id: int = Field(..., json_schema_extra={"example": 1})
     titulo: str = Field(..., json_schema_extra={"example": "O Senhor dos Anéis"})
     preco: str = Field(..., json_schema_extra={"example": "39.90"})
     rating: str = Field(..., json_schema_extra={"example": "Two"})

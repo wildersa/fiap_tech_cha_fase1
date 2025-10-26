@@ -51,6 +51,14 @@ IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Função para baixar e salvar imagem
 def baixar_imagem(imagem_url, livro_id, session=None, timeout=(3,10)):
+    """Baixa a imagem principal de um livro e salva em data/imagens.
+    Args:
+        imagem_url: URL completa da imagem.
+        livro_id: usado como nome do arquivo.
+        session: sessão HTTP reutilizável.
+    Returns:
+        Caminho relativo do arquivo salvo ou None em caso de falha.
+    """
     nome_arquivo = f"{livro_id}.jpg"
     caminho = IMAGENS_DIR / nome_arquivo
 
@@ -75,6 +83,13 @@ def baixar_imagem(imagem_url, livro_id, session=None, timeout=(3,10)):
 
 # Função para extrair dados de um livro
 def extrair_dados_livro(book_soup, categoria):
+    """Extrai dados de um livro a partir do HTML do livro.
+    Args:
+        book_soup: BeautifulSoup do artigo do livro.
+        categoria: nome da categoria atual.
+    Returns:
+        dicionário com dados do livro ou None em caso de falha.
+    """
     try:
         titulo = book_soup.h3.a['title']
         preco = book_soup.find('p', class_='price_color').text.encode('latin1').decode('utf-8').strip() # Arrumar caractere que vem no preço.
@@ -136,6 +151,13 @@ def extrair_dados_livro(book_soup, categoria):
 
 # Vou usar o UPC como ID único.
 def pegar_upc_da_pagina(detalhe_url, session=None):
+    """Pega o UPC (ID único) de um livro a partir da sua página de detalhe.
+    Args:
+        detalhe_url: URL completa da página de detalhe do livro.
+        session: sessão HTTP reutilizável.
+    Returns:
+        UPC como string ou None em caso de falha.
+    """
     response = session.get(detalhe_url)
     soup = BeautifulSoup(response.text, 'html.parser')
     UPC = soup.find('th', string='UPC')

@@ -28,7 +28,7 @@ app = FastAPI(title="FIAP Tech Challenge - Fase 1", version="1.0.0")
 
 app.include_router(livros.router)
 
-@app.get("/api/v1/health", include_in_schema=False, tags=["infra"])
+@app.get("/api/v1/health", include_in_schema=True, tags=["infra"])
 async def health():
     return {"status": "ok"}
 
