@@ -26,8 +26,10 @@ import fiap_tech_cha_fase1.app.v1.routers.livros as livros
 
 app = FastAPI(title="FIAP Tech Challenge - Fase 1", version="1.0.0")
 
+# Adiciona os routers de livros
 app.include_router(livros.router)
 
+# router health
 @app.get("/api/v1/health", include_in_schema=True, tags=["infra"])
 async def health():
     return {"status": "ok"}
