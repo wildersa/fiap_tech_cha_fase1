@@ -210,7 +210,7 @@ docs/
 .vscode/
 .vscode/.ps_history
 
-imagens/
+#imagens/
 
 ROADMAP.md
 ROADMAP.md
