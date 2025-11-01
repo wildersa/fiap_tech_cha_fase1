@@ -8,37 +8,20 @@ Serviço para manipulação de dados de livros a partir de um arquivo CSV.
 - `GET /api/v1/books/search?title={title}&category={category}` — busca por título e/ou categoria;
 - `GET /api/v1/categories` — lista todas as categorias;
 
+### Funções pra dar suporte aos endpoints opcionais da API
+
+- `GET /api/v1/books/top-rated` — livros com melhor rating;
+- `GET /api/v1/books/price-range?min={min}&max={max}` — filtrar por faixa de preço.
+
 """
 
-import csv
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CSV = PROJECT_ROOT / "data" / "livros.csv"
-
-print(DEFAULT_CSV)
-
-# Ler o CSV e imprimir o conteúdo usando encodfing utf-8
-def carregar_livros():
-    try:
-        with DEFAULT_CSV.open(newline="", encoding="utf-8") as csvfile:
-            leitor = csv.DictReader(csvfile, delimiter=",", quotechar='"')
-            return [linha for linha in leitor]
-    except FileNotFoundError:
-        print(f"Arquivo não encontrado: {DEFAULT_CSV}")
-        return []
-    except csv.Error as e:
-        print(f"Erro ao ler CSV: {e}")
-        return []
-    except Exception as e:
-        print(f"Erro inesperado: {e}")
-        return []
+from .dataset_service import carregar_livros_raw, carregar_livros_normalizados
 
 def listar_livros():
-    return carregar_livros()
+    return carregar_livros_raw()
 
 def obter_livro_por_id(livro_id: str):
-    for livro in carregar_livros():
+    for livro in carregar_livros_raw():
         if livro['id'] == livro_id:
             return livro
     return None
@@ -48,25 +31,28 @@ def buscar_livros(titulo: str = None, categoria: str = None):
     Args: titulo: parte do título; categoria: nome exato da categoria.
     Returns: lista de registros do CSV já filtrados.
     """
-    dados = carregar_livros()
+    dados = carregar_livros_raw()
     if titulo:
         t = titulo.strip().lower()
         dados = [l for l in dados if t in l.get("titulo", "").lower()]
     if categoria:
         c = categoria.strip().lower()
         dados = [l for l in dados if l.get("categoria", "").lower() == c]
-
     return dados
 
 def listar_categorias():
     categorias = []
-    for livro in carregar_livros():
+    for livro in carregar_livros_raw():
         categorias.append(livro['categoria'])
     return sorted(set(categorias))
 
-if __name__ == "__main__":
-    # Testando as funções
-    print(f'\nObter categorias: \n{listar_categorias()}\n')
-    print(f'Obter livro por ID ("a22124811bfa8350"): \n{obter_livro_por_id("a22124811bfa8350")}\n')
-    print(f'Buscar livros (titulo="A Year in Provence (Provence #1)"): \n{buscar_livros(titulo="A Year in Provence (Provence #1)")}\n')
-    print(f'Buscar livros (categoria="Travel"): \n{buscar_livros(categoria="Travel")}\n')
+def listar_livros_top_rated(top_n: int = 10):
+    livros = carregar_livros_normalizados()
+    livros_ordenados = sorted(livros, key=lambda x: (x['rating'], x['preco']), reverse=True)
+    return livros_ordenados[:top_n]
+
+def filtrar_livros_por_faixa_de_preco(preco_min: float = None, preco_max: float = None):
+    livros = carregar_livros_normalizados()
+    livros = [l for l in livros if l['preco'] >= preco_min]
+    livros = [l for l in livros if l['preco'] <= preco_max]
+    return sorted(livros, key=lambda x: x['preco'], reverse=False)

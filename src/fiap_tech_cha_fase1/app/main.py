@@ -23,11 +23,13 @@ from fastapi.responses import JSONResponse
 #from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from prometheus_fastapi_instrumentator import Instrumentator
 import fiap_tech_cha_fase1.app.v1.routers.livros as livros
+import fiap_tech_cha_fase1.app.v1.routers.stats as stats
 
 app = FastAPI(title="FIAP Tech Challenge - Fase 1", version="1.0.0")
 
 # Adiciona os routers de livros
 app.include_router(livros.router)
+app.include_router(stats.router)
 
 # router health
 @app.get("/api/v1/health", include_in_schema=True, tags=["infra"])

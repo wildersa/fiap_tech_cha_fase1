@@ -3,9 +3,8 @@ Testes para os endpoints de livros usando httpx e FastAPI TestClient.
 """
 
 import pytest
-from fastapi.testclient import TestClient
 import csv
-from fiap_tech_cha_fase1.app.main import app  # importa a app FastAPI
+from fastapi.testclient import TestClient
 
 # Fixture para mockar o CSV
 @pytest.fixture
@@ -19,14 +18,16 @@ def mock_csv(tmp_path):
         writer = csv.DictWriter(f, fieldnames=['id', 'titulo', 'preco', 'rating', 'disponibilidade', 'categoria', 'imagem_local'])
         writer.writeheader()
         writer.writerows(data)
-    return csv_path
+    return data  # Retorna os dados em vez do path
 
 # Fixture para TestClient
 @pytest.fixture
-def client(mock_csv):
-    # Mock o path do CSV
-    from fiap_tech_cha_fase1.app.services import livros_service
-    livros_service.DEFAULT_CSV = mock_csv
+def client(monkeypatch, mock_csv):
+    # Mock a função carregar_livros_raw para retornar os dados mock
+    def mock_carregar_livros_raw(df_path=None):
+        return mock_csv
+    monkeypatch.setattr('fiap_tech_cha_fase1.app.services.dataset_service.carregar_livros_raw', mock_carregar_livros_raw)
+    from fiap_tech_cha_fase1.app.main import app
     return TestClient(app)
 
 # Teste para GET /api/v1/books

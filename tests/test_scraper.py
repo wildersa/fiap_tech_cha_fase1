@@ -112,29 +112,29 @@ def mock_csv(tmp_path):
         writer = csv.DictWriter(f, fieldnames=['id', 'titulo', 'categoria'])
         writer.writeheader()
         writer.writerows(data)
-    return csv_path
+    return data  # Retorna os dados mock
 
-def test_listar_livros(mock_csv):
-    with patch('fiap_tech_cha_fase1.app.services.livros_service.DEFAULT_CSV', mock_csv):
-        livros = listar_livros()
-        assert len(livros) == 2
-        assert livros[0]['titulo'] == 'Book 1'
+def test_listar_livros(monkeypatch, mock_csv):
+    monkeypatch.setattr('fiap_tech_cha_fase1.app.services.dataset_service.carregar_livros_raw', lambda: mock_csv)
+    livros = listar_livros()
+    assert len(livros) == 2
+    assert livros[0]['titulo'] == 'Book 1'
 
-def test_obter_livro_por_id(mock_csv):
-    with patch('fiap_tech_cha_fase1.app.services.livros_service.DEFAULT_CSV', mock_csv):
-        livro = obter_livro_por_id('1')
-        assert livro['titulo'] == 'Book 1'
-        assert obter_livro_por_id('999') is None
+def test_obter_livro_por_id(monkeypatch, mock_csv):
+    monkeypatch.setattr('fiap_tech_cha_fase1.app.services.dataset_service.carregar_livros_raw', lambda: mock_csv)
+    livro = obter_livro_por_id('1')
+    assert livro['titulo'] == 'Book 1'
+    assert obter_livro_por_id('999') is None
 
-def test_buscar_livros(mock_csv):
-    with patch('fiap_tech_cha_fase1.app.services.livros_service.DEFAULT_CSV', mock_csv):
-        results = buscar_livros(titulo='Book')
-        assert len(results) == 2
-        results = buscar_livros(categoria='Fiction')
-        assert len(results) == 1
+def test_buscar_livros(monkeypatch, mock_csv):
+    monkeypatch.setattr('fiap_tech_cha_fase1.app.services.dataset_service.carregar_livros_raw', lambda: mock_csv)
+    results = buscar_livros(titulo='Book')
+    assert len(results) == 2
+    results = buscar_livros(categoria='Fiction')
+    assert len(results) == 1
 
-def test_listar_categorias(mock_csv):
-    with patch('fiap_tech_cha_fase1.app.services.livros_service.DEFAULT_CSV', mock_csv):
-        categorias = listar_categorias()
-        assert 'Fiction' in categorias
-        assert 'Non-Fiction' in categorias
+def test_listar_categorias(monkeypatch, mock_csv):
+    monkeypatch.setattr('fiap_tech_cha_fase1.app.services.dataset_service.carregar_livros_raw', lambda: mock_csv)
+    categorias = listar_categorias()
+    assert 'Fiction' in categorias
+    assert 'Non-Fiction' in categorias

@@ -18,3 +18,15 @@ class LivroBase(BaseModel):
     disponibilidade: Literal["In stock", "Out of stock"] = Field(..., json_schema_extra={"example": "In stock"})
     categoria: str = Field(..., json_schema_extra={"example": "Fantasia"})
     imagem_local: Optional[str] = Field(None, json_schema_extra={"example": "/imagens/senhor_dos_aneis.jpg"})
+
+class LivroBaseNormalizado(LivroBase):
+    """Esquema de livro normalizado servido pela API.
+    Campos: id (UPC), titulo, preco (float), rating (int 1–5), disponibilidade, categoria, imagem_local.
+    """
+    id: str = Field(..., json_schema_extra={"example": "bb8245f52c7cce8f"})
+    titulo: str = Field(..., json_schema_extra={"example": "O Senhor dos Anéis"})
+    preco: float = Field(..., json_schema_extra={"example": 39.90})
+    rating: int = Field(..., json_schema_extra={"example": 2})
+    disponibilidade: Literal["In stock", "Out of stock"] = Field(..., json_schema_extra={"example": "In stock"})
+    categoria: str = Field(..., json_schema_extra={"example": "Fantasia"})
+    imagem_local: Optional[str] = Field(None, json_schema_extra={"example": "/imagens/senhor_dos_aneis.jpg"})
