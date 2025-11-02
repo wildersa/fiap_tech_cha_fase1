@@ -283,6 +283,10 @@ curl http://127.0.0.1:8000/api/v1/health
 
 ---
 
+## Monitoramento (bônus técnico)
+
+A API expõe métricas Prometheus em `/metrics`, instrumentadas via `prometheus-fastapi-instrumentator`, permitindo monitorar requisições, latência e erros.
+
 ## Deploy e Entrega
 
 - Deploy público: [https://fiap-tech-cha-fase1.vercel.app/](https://fiap-tech-cha-fase1.vercel.app/)  
