@@ -32,7 +32,7 @@ app.include_router(livros.router)
 app.include_router(stats.router)
 
 # router health
-@app.get("/api/v1/health", include_in_schema=True, tags=["infra"])
+@app.get("/api/v1/health", include_in_schema=True, tags=["infra"], summary="Verifica o status da API", description="Retorna o status atual da API.")
 async def health():
     return {"status": "ok"}
 

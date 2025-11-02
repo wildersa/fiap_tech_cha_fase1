@@ -16,6 +16,8 @@ from pathlib import Path
 import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import argparse
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,7 +30,11 @@ adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-debug_interno = False
+parser = argparse.ArgumentParser(description="Scraper de livros do site Books to Scrape")
+parser.add_argument("--debug", action="store_true", help="Ativa modo de debug interno (prints detalhados)")
+args = parser.parse_args()
+
+debug_interno = args.debug
 
 def debug_print(msg, *args, **kwargs):
     if debug_interno:
@@ -149,7 +155,7 @@ def extrair_dados_livro(book_soup, categoria):
     except (AttributeError, KeyError, TypeError, IndexError):
         return None
 
-# Vou usar o UPC como ID único.
+# Pegar UPC único do livro. Vou usar o UPC como ID único.
 def pegar_upc_da_pagina(detalhe_url, session=None):
     """Pega o UPC (ID único) de um livro a partir da sua página de detalhe.
     Args:
