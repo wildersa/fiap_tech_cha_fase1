@@ -147,7 +147,15 @@ Para gerar o dataset atualizado:
 python -m fiap_tech_cha_fase1.scripts.scraper
 ```
 
-- Usa o `UPC` como ID único.  
+Use o parâmetro --debug para exibir logs detalhados de execução:
+
+```bash
+python -m fiap_tech_cha_fase1.scripts.scraper --debug
+```
+
+O scraper:
+
+- Usa o `UPC` do próprio site como ID único.  
 - Gera `data/livros.csv` e imagens em `data/imagens/`.  
 - Evita baixar imagens duplicadas.
 
