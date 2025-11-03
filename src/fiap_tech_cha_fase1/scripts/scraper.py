@@ -30,11 +30,17 @@ adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-parser = argparse.ArgumentParser(description="Scraper de livros do site Books to Scrape")
-parser.add_argument("--debug", action="store_true", help="Ativa modo de debug interno (prints detalhados)")
-args = parser.parse_args()
+# define antes para não causar erro em importação
+debug_interno = False
 
-debug_interno = args.debug
+def get_args():
+    parser = argparse.ArgumentParser(description="Scraper de livros do site Books to Scrape")
+    parser.add_argument("--debug", action="store_true", help="Ativa modo de debug interno (prints detalhados)")
+    # só faz parse se for execução direta, não durante import (pytest, etc.)
+    if __name__ == "__main__":
+        return parser.parse_args()
+    else:
+        return parser.parse_args([])
 
 def debug_print(msg, *args, **kwargs):
     if debug_interno:
@@ -169,79 +175,106 @@ def pegar_upc_da_pagina(detalhe_url, session=None):
     UPC = soup.find('th', string='UPC')
     return UPC.find_next_sibling('td').text.strip() if UPC else None
 
-# Lista para armazenar todos os livros
-livros = []
+def run_scraper(debug: bool = False, session_arg=None):
+    """
+    Executa o processo de scraping completo.
+    Args:
+        debug: ativa mensagens de debug (compatível com debug_print).
+        session_arg: opcional requests.Session() para facilitar testes/mocks.
+    Returns:
+        dict com chaves: 'livros', 'tempo_total', 'imagens_tentadas', 'imagens_salvas'
+    """
+    global debug_interno
+    debug_interno = bool(debug)
 
-# Contadores de imagens (tentadas e salvas)
-baixar_imagem.contador_tentadas = 0
-baixar_imagem.contador_salvas = 0
+    tempo_inicio = time.time()
 
-# Pegar todas as categorias
-categorias = soup.find('ul', class_='nav-list').find('ul').find_all('li')
-debug_print(f"Encontradas {len(categorias)} categorias.")
+    # configurar sessão (permite injeção para testes)
+    sess = session_arg or requests.Session()
+    sess.headers.update({"User-Agent": "Mozilla/5.0"})
+    retry = Retry(total=3, backoff_factor=0.5, status_forcelist=[500,502,503,504], raise_on_status=False)
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
+    sess.mount("http://", adapter)
+    sess.mount("https://", adapter)
 
-total_categorias = len(categorias)
-# processed_categories = 0
+    # criar diretórios localmente
+    IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Iterar sobre categorias e pegar dados dos livros
-for idx, cat in enumerate(categorias, start=1):
-    cat_nome = cat.a.text.strip()
-    cat_url_relativa = cat.a['href']
-    cat_url = urljoin(BASE_URL, cat_url_relativa)
-    
-    # Acessar página da categoria
-    cat_resposta = session.get(cat_url)
-    cat_soup = BeautifulSoup(cat_resposta.text, 'html.parser')
+    livros = []
+    baixar_imagem.contador_tentadas = 0
+    baixar_imagem.contador_salvas = 0
 
-    # Descobrir número de páginas
-    pagina_corrente = cat_soup.find('li', class_='current')
-    if pagina_corrente:
-        pagina_texto = pagina_corrente.text.strip()
-        pagina_texto_split = pagina_texto.split()
-        try:
-            primeira_pagina = int(pagina_texto_split[1])
-            ultima_pagina = int(pagina_texto_split[3])
-        except (IndexError, ValueError):
-            primeira_pagina = ultima_pagina = 1
-    else:
-        primeira_pagina = ultima_pagina = 1
-    
-    # Pegar livros de cada página
-    for pagina in range(primeira_pagina, ultima_pagina + 1):
-        if pagina == 1:
-            url_pagina = cat_url
+    # obter página inicial
+    response = sess.get(BASE_URL)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    categorias = soup.find('ul', class_='nav-list').find('ul').find_all('li')
+    debug_print(f"Encontradas {len(categorias)} categorias.")
+
+    total_categorias = len(categorias)
+
+    for idx, cat in enumerate(categorias, start=1):
+        cat_nome = cat.a.text.strip()
+        cat_url_relativa = cat.a['href']
+        cat_url = urljoin(BASE_URL, cat_url_relativa)
+
+        cat_resposta = sess.get(cat_url)
+        cat_soup = BeautifulSoup(cat_resposta.text, 'html.parser')
+
+        pagina_corrente = cat_soup.find('li', class_='current')
+        if pagina_corrente:
+            pagina_texto = pagina_corrente.text.strip()
+            pagina_texto_split = pagina_texto.split()
+            try:
+                primeira_pagina = int(pagina_texto_split[1])
+                ultima_pagina = int(pagina_texto_split[3])
+            except (IndexError, ValueError):
+                primeira_pagina = ultima_pagina = 1
         else:
-            url_pagina = cat_url.replace('index.html', f'page-{pagina}.html')
-        response = session.get(url_pagina)
-        soup = BeautifulSoup(response.text, 'html.parser')
+            primeira_pagina = ultima_pagina = 1
 
-        livros_na_pagina = soup.find_all('article', class_='product_pod')
-        for book_soup in livros_na_pagina:
-            dados_livro = extrair_dados_livro(book_soup, cat_nome)
-            # incrementar tentativas quando houver URL de imagem
-            if dados_livro and dados_livro.get('imagem_url'):
-                baixar_imagem.contador_tentadas += 1
-            if dados_livro:
-                livros.append(dados_livro)
-    
-    # Barra de progresso global por categoria
-    progresso = (idx / total_categorias) * 100
-    barra = '#' * int(progresso / 10) + ' ' * (10 - int(progresso / 10))
-    debug_print(f'\r[{barra}] {progresso:.1f}% - Categoria {cat_nome} processada, total livros: {len(livros)}', end='', flush=True)
-    
+        for pagina in range(primeira_pagina, ultima_pagina + 1):
+            if pagina == 1:
+                url_pagina = cat_url
+            else:
+                url_pagina = cat_url.replace('index.html', f'page-{pagina}.html')
+            response = sess.get(url_pagina)
+            soup_page = BeautifulSoup(response.text, 'html.parser')
 
-# Salvar em CSV
-with CSV_PATH.open(mode='w', newline='', encoding='utf-8') as file:
-    writer = csv.DictWriter(file, fieldnames=['id', 'titulo', 'preco', 'rating', 'disponibilidade', 'categoria', 'imagem_local'],
-                            extrasaction='ignore')
-    writer.writeheader()
-    writer.writerows(livros)
-debug_print(f"\nDados salvos em {CSV_PATH}")
+            livros_na_pagina = soup_page.find_all('article', class_='product_pod')
+            for book_soup in livros_na_pagina:
+                dados_livro = extrair_dados_livro(book_soup, cat_nome)
+                if dados_livro and dados_livro.get('imagem_url'):
+                    baixar_imagem.contador_tentadas += 1
+                if dados_livro:
+                    livros.append(dados_livro)
 
-# Calcula e imprime o tempo total
-tempo_fim = time.time()
-tempo_total = tempo_fim - tempo_inicio
+        progresso = (idx / total_categorias) * 100
+        barra = '#' * int(progresso / 10) + ' ' * (10 - int(progresso / 10))
+        debug_print(f'\r[{barra}] {progresso:.1f}% - Categoria {cat_nome} processada, total livros: {len(livros)}', end='', flush=True)
 
-# Resumo de imagens
-debug_print(f"Imagens tentadas: {baixar_imagem.contador_tentadas} | Imagens salvas: {baixar_imagem.contador_salvas}")
-debug_print(f"\nTempo total {tempo_total:.2f} segundos.")
+    # salvar em CSV
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with CSV_PATH.open(mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=['id', 'titulo', 'preco', 'rating', 'disponibilidade', 'categoria', 'imagem_local'],
+                                extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(livros)
+    debug_print(f"\nDados salvos em {CSV_PATH}")
+
+    tempo_fim = time.time()
+    tempo_total = tempo_fim - tempo_inicio
+
+    debug_print(f"Imagens tentadas: {baixar_imagem.contador_tentadas} | Imagens salvas: {baixar_imagem.contador_salvas}")
+    debug_print(f"\nTempo total {tempo_total:.2f} segundos.")
+
+    return {
+        "livros": livros,
+        "tempo_total": tempo_total,
+        "imagens_tentadas": baixar_imagem.contador_tentadas,
+        "imagens_salvas": baixar_imagem.contador_salvas
+    }
+
+if __name__ == "__main__":
+    args = get_args()
+    run_scraper(debug=args.debug)
