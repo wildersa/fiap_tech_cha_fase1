@@ -1,6 +1,6 @@
 [project]
 name = "fiap-tech-cha-fase1"
-version = "0.1.0"
+version = "2.0.0"
 description = ""
 authors = [
     {name = "Wilder Andreatta",email = "r3d_l1w@hotmail.com"}
