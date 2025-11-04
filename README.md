@@ -14,7 +14,7 @@ Resumo rápido:
 
 ## Arquitetura e Pipeline
 
-O projeto é dividido em três camadas principais:
+O projeto é dividido em quatro camadas principais:
 
 1. **Ingestão (Scripts de Scraping)**
    - O módulo `scripts/scraper.py` coleta informações de todos os livros do site Books to Scrape.
@@ -30,6 +30,9 @@ O projeto é dividido em três camadas principais:
    - A aplicação FastAPI (`app/main.py`) expõe endpoints REST.
    - Inclui documentação automática (`/docs` e `/redoc`).
    - Estrutura modular (routers versionados em `/api/v1/`).
+
+4. **Consumo (Consumidores Externos)**
+   - Consumidores como notebooks de ciência de dados, ferramentas de BI (PowerBI, etc.) podem acessar a API para obter os dados necessários para análise e modelagem.
 
 Fluxo do pipeline:
 
@@ -76,11 +79,11 @@ Os dados coletados formam um dataset com campos úteis para experimentos de Mach
 
 | Campo | Descrição | Tipo | Uso em ML |
 |-------|------------|------|-----------|
-| title | Título do livro | texto | tokenização, embeddings |
-| price | Preço | numérico | variável de regressão ou feature em recomendação |
+| titulo | Título do livro | texto | tokenização, embeddings |
+| preco | Preço | numérico | variável de regressão ou feature em recomendação |
 | rating | Avaliação (1–5) | categórico | classificação, modelagem de preferências |
-| category | Gênero | categórico | agrupamento, segmentação |
-| availability | Disponibilidade | categórico | análise de estoque ou previsão de vendas |
+| categoria | Categoria | categórico | agrupamento, segmentação |
+| disponibilidade | Disponibilidade | categórico | análise de estoque ou previsão de vendas |
 
 Cenários de uso:
 
@@ -101,7 +104,7 @@ O dataset `livros.csv` pode ser usado diretamente em notebooks de ML (pandas, sc
 
 ### .env
 
-Crie um arquivo `.env` na raiz do projeto:
+Crie um `.env` na **raiz do projeto** com codificação **UTF-8 sem BOM**:
 
 ```env
 APP_NAME=fiap_tech_cha_fase1
@@ -121,23 +124,27 @@ cd fiap_tech_cha_fase1
 
 ### Instalando dependências
 
-Via Poetry:
+#### Opção 1 — Usando Poetry (recomendado)
 
 ```bash
 poetry install
 ```
 
-Ou via pip:
+O Poetry cria automaticamente um ambiente virtual e instala todas as dependências.
+
+#### Opção 2 — Usando pip
+
+Crie e ative manualmente o ambiente virtual:
 
 ```bash
+python -m venv .venv
+.\.venv\Scripts\activate      # Windows
+# source .venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
+pip install -e .
 ```
 
-### Ativar ambiente
-
-```bash
-.\.venv\Scripts\activate
-```
+---
 
 ### Executar Scraper
 
@@ -147,7 +154,7 @@ Para gerar o dataset atualizado:
 python -m fiap_tech_cha_fase1.scripts.scraper
 ```
 
-Use o parâmetro --debug para exibir logs detalhados de execução:
+Use o parâmetro `--debug` para exibir logs detalhados de execução:
 
 ```bash
 python -m fiap_tech_cha_fase1.scripts.scraper --debug
@@ -175,7 +182,7 @@ Via python diretamente:
 python -m fiap_tech_cha_fase1
 ```
 
-A aplicação estará disponível em:  
+A aplicação por padrão estará disponível em:  
 `http://127.0.0.1:8000`
 
 ---
@@ -187,22 +194,26 @@ A aplicação estará disponível em:
 
 ### Rotas obrigatórias
 
-- GET `/api/v1/books` — lista todos os livros  
-- GET `/api/v1/books/{id}` — detalhes de um livro pelo ID  
-- GET `/api/v1/books/search?title={title}&category={category}` — busca por título e/ou categoria  
-- GET `/api/v1/categories` — lista todas as categorias  
-- GET `/api/v1/health` — status da API  
+- GET `/api/v1/books` — lista todos os livros
+- GET `/api/v1/books/search?title={title}&category={category}` — busca por título e/ou categoria
+- GET `/api/v1/categories` — lista todas as categorias
+- GET `/api/v1/books/{id}` — detalhes de um livro pelo ID
+- GET `/api/v1/health` — status da API
 
-### Rotas adicionais (opcional / insights)
+### Rotas opcionais (insights)
 
-- GET `/api/v1/stats/overview` — estatísticas gerais (total de livros, preço médio, distribuição de ratings)  
-- GET `/api/v1/stats/categories` — agregações por categoria  
+- GET `/api/v1/books/top-rated` — top 10 livros com melhor avaliação
+- GET `/api/v1/books/price-range?min={min}&max={max}` — livros dentro de uma faixa de preço
+- GET `/api/v1/stats/overview` — estatísticas gerais (total de livros, preço médio, distribuição de ratings)
+- GET `/api/v1/stats/categories` — agregações por categoria
 
 ---
 
 ## Exemplos de chamadas
 
-### GET `/api/v1/books`
+### books
+
+#### GET `/api/v1/books`
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/books
@@ -212,34 +223,17 @@ curl http://127.0.0.1:8000/api/v1/books
 [
   {
     "id": "23356462d1320d61",
-    "title": "In Her Wake",
-    "price": "£12.84",
+    "titulo": "In Her Wake",
+    "preco": "£12.84",
     "rating": "One",
-    "availability": "In stock",
-    "category": "Thriller",
-    "local_image": "data/imagens/23356462d1320d61.jpg"
+    "disponibilidade": "In stock",
+    "categoria": "Thriller",
+    "imagem_local": "data/imagens/23356462d1320d61.jpg"
   }
 ]
 ```
 
-### GET `/api/v1/books/{id}`
-
-```bash
-curl http://127.0.0.1:8000/api/v1/books/23356462d1320d61
-```
-
-```json
-{
-  "id": "23356462d1320d61",
-  "title": "In Her Wake",
-  "price": "£12.84",
-  "rating": "One",
-  "availability": "In stock",
-  "local_image": "data/imagens/23356462d1320d61.jpg"
-}
-```
-
-### GET `/api/v1/books/search?title=In Her Wake&category=Thriller`
+#### GET `/api/v1/books/search`
 
 ```bash
 curl "http://127.0.0.1:8000/api/v1/books/search?title=In Her Wake&category=Thriller"
@@ -249,16 +243,17 @@ curl "http://127.0.0.1:8000/api/v1/books/search?title=In Her Wake&category=Thril
 [
   {
     "id": "23356462d1320d61",
-    "title": "In Her Wake",
-    "price": "£12.84",
+    "titulo": "In Her Wake",
+    "preco": "£12.84",
     "rating": "One",
-    "availability": "In stock",
-    "local_image": "data/imagens/23356462d1320d61.jpg"
+    "disponibilidade": "In stock",
+    "categoria": "Thriller",
+    "imagem_local": "data/imagens/23356462d1320d61.jpg"
   }
 ]
 ```
 
-### GET `/api/v1/categories`
+#### GET `/api/v1/categories`
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/categories
@@ -266,12 +261,75 @@ curl http://127.0.0.1:8000/api/v1/categories
 
 ```json
 [
-  { "id": "1", "name": "Category 1" },
-  { "id": "2", "name": "Category 2" }
+  "Academic",
+  "Add a comment",
+  "Adult Fiction",
+  "Art",
+  "Autobiography",
+  "Biography",
+  "Business"
 ]
 ```
 
-### GET `/api/v1/health`
+#### GET `/api/v1/books/top-rated`
+
+```bash
+curl http://127.0.0.1:8000/api/v1/books/top-rated
+```
+
+```json
+[
+  {
+    "id": "6478ccb4416e6a5d",
+    "titulo": "The Barefoot Contessa Cookbook",
+    "preco": 59.92,
+    "rating": 5,
+    "disponibilidade": "In stock",
+    "categoria": "Food and Drink",
+    "imagem_local": "data\\imagens\\6478ccb4416e6a5d.jpg"
+  }
+]
+```
+
+#### GET `/api/v1/books/price-range?min=0&max=5000`
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/books/price-range?min=12&max=13"
+```
+
+```json
+[
+  {
+    "id": "88ec621893e595d0",
+    "titulo": "You Are a Badass: How to Stop Doubting Your Greatness and Start Living an Awesome Life",
+    "preco": 12.08,
+    "rating": 3,
+    "disponibilidade": "In stock",
+    "categoria": "Self Help",
+    "imagem_local": "data\\imagens\\88ec621893e595d0.jpg"
+  }
+]
+```
+
+#### GET `/api/v1/books/{id}`
+
+```bash
+curl http://127.0.0.1:8000/api/v1/books/88ec621893e595d0
+```
+
+```json
+{
+  "id": "88ec621893e595d0",
+  "titulo": "You Are a Badass: How to Stop Doubting Your Greatness and Start Living an Awesome Life",
+  "preco": "£12.08",
+  "rating": "Three",
+  "disponibilidade": "In stock",
+  "categoria": "Self Help",
+  "imagem_local": "data\\imagens\\88ec621893e595d0.jpg"
+}
+```
+
+#### GET `/api/v1/health`
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/health
@@ -279,6 +337,51 @@ curl http://127.0.0.1:8000/api/v1/health
 
 ```json
 { "status": "ok" }
+```
+
+### stats
+
+#### GET `/api/v1/stats/overview`
+
+```bash
+curl http://127.0.0.1:8000/api/v1/stats/overview
+```
+
+```json
+{
+  "total_livros": 1000,
+  "preco_medio": 35.07,
+  "distribuicao_ratings": {
+    "1": 226,
+    "2": 196,
+    "3": 203,
+    "4": 179,
+    "5": 196
+  }
+}
+```
+
+#### GET `/api/v1/stats/categories`
+
+```bash
+curl http://127.0.0.1:8000/api/v1/stats/categories
+```
+
+```json
+{
+  "Travel": {
+    "quantidade": 11,
+    "preco_medio": 39.79,
+    "preco_min": 23.21,
+    "preco_max": 56.88
+  },
+  "Mystery": {
+    "quantidade": 32,
+    "preco_medio": 31.72,
+    "preco_min": 10.69,
+    "preco_max": 59.48
+  }
+}
 ```
 
 ---
@@ -291,12 +394,12 @@ A API expõe métricas Prometheus em `/metrics`, instrumentadas via `prometheus-
 
 - Deploy público: [https://fiap-tech-cha-fase1.vercel.app/](https://fiap-tech-cha-fase1.vercel.app/)  
 - Documentação da API: [https://fiap-tech-cha-fase1.vercel.app/docs](https://fiap-tech-cha-fase1.vercel.app/docs)  
-- Vídeo de demonstração: *(inserir link do vídeo aqui)*
+- Vídeo de demonstração: [https://youtu.be/FGt-HbYJr5I](https://youtu.be/FGt-HbYJr5I)
 
 ---
 
 ## Autor
 
-Wilder Schmidt Andreatta  
+Wilder Andreatta
 FIAP | Pós Tech - Machine Learning Engineering  
 Fase 1 — Web Scraping e API de Livros
